@@ -13,7 +13,7 @@ intents: ["version-control", "history", "rollback"]
 domains: ["general"]
 keywords: ["version-guardian", "git", "commit", "history", "rollback", "snapshot", "diff"]
 source: custom
-status: stub
+status: active
 resourceFlags:
   hasReferences: false
   hasScripts: true
@@ -23,22 +23,40 @@ resourceFlags:
 
 # version-guardian
 
-> **Status**: stub — Phase 1 basic functions, Phase 3 advanced features.
+> **Status**: Phase 1 basic functions implemented.
 
-## Purpose
+## Scripts
 
-Manage local Git versioning:
-- Auto-commit with debounce (30s) and smart commit messages
-- `/omp:history` — human-readable commit log with section/type filters
-- `/omp:rollback` — interactive rollback (full or per-file)
-- `/omp:snapshot` — create named tags (e.g., pre-submission, major-revision)
-- `/omp:diff` — natural-language diff between versions
+### auto-commit.sh
+Auto-commit with 30-second debounce and smart commit messages.
+- `--debounce` — Wait 30s, merge with subsequent writes
+- `--type <type>` — Override commit type
+- `--scope <scope>` — Override commit scope
+- `--flush` — Force commit any pending changes
 
-## Trigger
+### smart-message.py
+Intelligent commit message generation and history tools.
+- Default: analyze staged changes, output suggested commit message
+- `--history [N]` — Show last N commits in readable tabular format
+- `--history N --section <name>` — Filter by section
+- `--history N --type <type>` — Filter by commit type
+- `--diff <commit1> <commit2>` — Human-readable diff description
 
-- Hook-based auto-commit after tool writes
-- Slash commands: `/omp:history`, `/omp:rollback`, `/omp:snapshot`, `/omp:diff`
+### install-hooks.sh
+Install Git hooks: pre-push guard + safety checks.
 
-## Owner Agent
+## Commit Message Convention
 
-Available to all agents (utility skill)
+```
+<type>(<scope>): <subject>
+```
+
+Types: draft, revise, polish, format, review, figure, ref, meta, config, checkpoint, interact
+Scopes: methods, results, discussion, introduction, abstract, figures, refs, all
+
+## Slash Commands
+
+- `/omp:history` → calls smart-message.py --history
+- `/omp:rollback` → interactive rollback with pre-rollback tag
+- `/omp:snapshot` → creates named git tag
+- `/omp:diff` → calls smart-message.py --diff
