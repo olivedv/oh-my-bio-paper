@@ -1,63 +1,81 @@
 ---
-description: 同行评审：展示审查维度等确认，结果回来后逐条讨论修改方案
+description: 对当前 section 或全文做 6 维度审查
 ---
 
 > **必须使用 AskUserQuestion 工具进行所有确认步骤，不得用纯文字替代。**
 
-你是 Oh My Paper Orchestrator。论文审查结果需要和用户一起分析。
+你是 Reviewer 角色。对论文进行结构化审查。
 
 ## 第一步：确认审查范围
 
 ```bash
-ls sections/
-cat .pipeline/docs/result_summary.md | head -20
+cat .pipeline/memory/manuscript_state.md
+ls paper/sections/
 ```
 
 用 `AskUserQuestion` 展示：
 
-> **准备对以下内容进行同行评审**：
-> - sections/：[列出已有的 tex 文件]
+> **准备审查的内容**：
+> - [列出状态为 draft_complete 或以上的 section]
 >
-> **审查维度**：技术贡献 / 实验充分性 / 写作质量 / 引用准确性
->
-> 预计 2-3 分钟，Codex 在后台完成。
+> **审查维度**（6 项）：
+> 1. 数据一致性（Figure/Table 与文本描述是否匹配）
+> 2. 逻辑连贯性（论证是否自洽）
+> 3. 引用完整性（所有 claim 是否有引用支撑）
+> 4. 攻击点预测（审稿人可能质疑的地方）
+> 5. 语言质量（语法、用词）
+> 6. 风格合规性（是否符合 style_profile.md）
 
 选项：
-- `开始审查`
+- `全部维度审查`
+- `只做数据一致性检查`
 - `增加特别关注的方面`
 - `取消`
 
-如果用户有额外关注点，将其加入任务描述。
+## 第二步：执行审查
 
-## 第二步：启动审查
+读取相关文件：
+- `paper/sections/[target].tex`
+- `.pipeline/memory/figure_registry.md`
+- `.pipeline/memory/style_profile.md`
+- `.pipeline/memory/journal_spec.md`
+- `.pipeline/memory/literature_bank.md`
 
-```
-/codex:rescue --background 使用 .claude/skills/inno-paper-reviewer/SKILL.md 对项目 LaTeX 论文进行同行评审（[含用户额外要求]）。将报告追加写入 .pipeline/memory/review_log.md，格式：评分表格 + 必须修改列表 + 建议修改列表 + 推荐结论。完成后更新 agent_handoff.md。
-```
+调用 manuscript-reviewer skill 逐维度审查。
 
-## 第三步：逐条讨论审查结果
+## 第三步：逐条讨论
 
-结果回来后，读取 `review_log.md`，**不要直接给出结论**，而是逐项和用户讨论：
+**不要一次性倾倒所有结果**。按严重性从高到低，逐条和用户讨论：
 
-> **审查结果（技术贡献：X/5）**
+> **[🔴 critical] 数据一致性**：
+> Results ¶3 提到 Fig2B 显示 X，但 figure_registry 中 Fig2B 描述为 Y。
 >
-> 必须修改：
-> 1. [问题 A]——你怎么看？
+> 你怎么看？
 
 用 `AskUserQuestion`：
-- `同意，让 Codex 修改`
-- `我有不同看法`
-- `这个问题不重要，跳过`
+- `确认，需要修改文本`
+- `确认，需要更新 figure_registry`
+- `这个描述是正确的，跳过`
 
-每个 major 问题都经过用户确认后，再批量发给 Codex 修改。
+每个 critical/major 问题都需要用户确认。
 
-## 第四步：决定最终结论
+## 第四步：输出审查报告
 
-所有问题讨论完后，询问：
+将所有结果按格式写入 `review_log.md`：
 
-> **你的判断是**：
+```markdown
+### [日期] [Section] — Round N
+
+| # | 严重性 | 维度 | 位置 | 问题 | 建议 | 用户决定 |
+```
+
+更新 `manuscript_state.md` 中对应 section 的状态为 `reviewed`。
+
+## 第五步：后续行动
+
+> **审查完成**，你想：
 
 选项：
-- `可以了，进入 promotion 阶段`
-- `还需要修改，我来描述改哪里`
-- `需要大幅修改，重回 /omp:write`
+- `把确认要改的地方交给 Writer 修改`
+- `自己手动修改`
+- `回到 /omp:plan 查看全局`

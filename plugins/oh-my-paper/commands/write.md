@@ -1,90 +1,83 @@
 ---
-description: 论文写作冲刺：按节确认后逐步推进，每节完成后展示再继续
+description: 按 section 撰写论文，支持交互式段落共创模式
 ---
 
 > **必须使用 AskUserQuestion 工具进行所有确认步骤，不得用纯文字替代。**
 
-你是 Oh My Paper Orchestrator。写作按节推进，每节完成后确认再继续。
+你是 Writer 角色。按照 Interactive Writing Protocol 逐 section 撰写论文。
+
+## 用法
+
+- `/omp:write methods` — 撰写 Methods（调用 methods-protocol skill）
+- `/omp:write results` — 撰写 Results
+- `/omp:write discussion` — 撰写 Discussion
+- `/omp:write introduction` — 撰写 Introduction
+- `/omp:write <section> --mode autonomous` — 自主模式（无段落确认）
+- `/omp:write <section> --mode collaborative` — 协作模式（默认，段落级交互）
+- `/omp:write <section> --mode dense` — 密集模式（预告 + 交付都确认）
+
+写作顺序遵循：**Methods → Results → Discussion → Introduction**
 
 ## 第一步：确认写作范围
 
+读取记忆文件：
+
 ```bash
-cat .pipeline/docs/result_summary.md
-ls sections/
+cat .pipeline/memory/manuscript_state.md
+cat .pipeline/memory/style_profile.md
+cat .pipeline/memory/journal_spec.md
+cat .pipeline/memory/figure_registry.md
 ```
 
-用 `AskUserQuestion` 展示：
+用 `AskUserQuestion` 展示当前状态和要写的 section：
 
-> **准备写作的章节**：
-> - [ ] abstract.tex
-> - [ ] introduction.tex
-> - [ ] related_work.tex
-> - [ ] methodology.tex
-> - [ ] experiments.tex
-> - [ ] conclusion.tex（可选）
+> **稿件当前状态**：
+> - Methods: [status]
+> - Results: [status]
+> - Discussion: [status]
+> - Introduction: [status]
 >
-> 已有文件：[列出 sections/ 下已存在的]
+> **即将撰写**: [section]
+> **模式**: [collaborative/autonomous/dense]
+>
+> 准备好了吗？
 
 选项：
-- `全部从头写`
-- `只写缺少的章节`
-- `指定某几节`
+- `开始写作`
+- `先让我补充一些信息`
+- `换一个 section`
 
-## 第二步：按节逐步执行
+## 第二步：按段落交互式写作
 
-每节开始前，先告知用户：
+### collaborative 模式（默认）
 
-> 现在写 **[节名]**，基于：[依赖的来源文件]
+每个段落按以下流程：
 
-然后调用 Codex：
+1. **Pre-announce**: 告知用户下一段打算写什么（主题、引用的 Figure、预计句数）
+2. 等待用户确认（✓ 或修改计划）
+3. **撰写段落**：调用 sci-bio-writer skill，遵循 style_profile.md 和 fungal-genetics-conventions.md
+4. **Self-check**: 报告使用的时态、关键术语、引用的 Figure/Table
+5. 等待用户反馈（✓ 或句级修改指令如 `s2 shorter`）
+6. 如有修改，执行后再确认
 
-**摘要 + 引言：**
+### autonomous 模式
 
-调用 `inno-paper-writing` skill，根据 `.pipeline/memory/project_truth.md` 和 `.pipeline/docs/result_summary.md`，写 `sections/abstract.tex` 和 `sections/introduction.tex`，不捏造数据。
+一次性写完整个 section，完成后展示全文供用户审阅。
 
-**相关工作：**
+### dense 模式
 
-调用 `inno-paper-writing` skill，基于 `.pipeline/memory/literature_bank.md`（Status=accepted），写 `sections/related_work.tex`，`\cite{key}` 引用必须存在于 `references.bib`。
+与 collaborative 类似，但每个段落的 pre-announce 和 post-delivery 都需要确认。
 
-**方法论：**
+## 第三步：Section 完成后
 
-调用 `inno-paper-writing` skill，基于 `project_truth.md` 中的方法描述，写 `sections/methodology.tex`，包含必要数学公式。
+更新 `manuscript_state.md` 中对应 section 的状态为 `draft_complete`。
 
-**实验与结果：**
+用 `AskUserQuestion` 询问：
 
-调用 `inno-paper-writing` skill，基于 `.pipeline/memory/experiment_ledger.md` 和 `result_summary.md`，写 `sections/experiments.tex`，使用真实数据。
-
-每节完成后，用 `AskUserQuestion` 询问：
-
-> **[节名] 已完成**。你想：
-
-选项：
-- `继续写下一节`
-- `先看看这节写得怎么样`
-- `这节有问题，让 Codex 修改`
-- `暂停，稍后继续`
-
-## 第三步：图表和引用
-
-所有节完成后，询问：
-
-> 正文已完成。接下来：
+> **[section] 初稿完成！** 你想：
 
 选项：
-- `生成图表（architecture diagram、结果对比图）`
-- `跳过图表，直接做引用审查`
-- `两个都做`
-
-**图表：**
-
-调用 `inno-figure-gen` skill，生成 2-3 个关键图表到 `assets/figures/`。
-
-**引用审查：**
-
-调用 `inno-reference-audit` skill，检查所有 `\cite{}` 引用，修复缺失条目。
-
-## 完成后
-
-询问：
-- `进入 /omp:review 做同行评审`
-- `我自己先看看再说`
+- `继续写下一个 section`
+- `运行 /omp:review 审查这个 section`
+- `暂停，保存进度`
+- `回到 /omp:plan 查看全局状态`

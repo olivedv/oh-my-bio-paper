@@ -1,58 +1,205 @@
 ---
-description: 初始化研究项目结构（.pipeline/），并检查 Codex 插件是否就绪
+description: 初始化生物论文写作项目（.pipeline/、Git 仓库、记忆文件、Hooks）
 ---
 
-> **必须使用 AskUserQuestion 工具进行所有确认步骤，不得用纯文字替代。**
+> **必须使用 AskUserQuestion 工具进行所有确认和信息采集步骤，不得用纯文字替代。**
 
-你正在为当前目录初始化 Oh My Paper 研究 harness。
+你正在为当前目录初始化 Oh My Bio-Paper 论文写作环境。
 
-## 第一步：检查 Codex 插件
+---
 
-先确认 Codex 插件已安装。如果 `/codex:setup` 命令可用，运行它：
+## 第一步：采集项目信息
 
-```bash
-node -e "process.exit(0)" 2>/dev/null && echo "Node.js OK"
-which codex 2>/dev/null && codex --version 2>/dev/null || echo "Codex not found"
-```
+用 `AskUserQuestion` 依次收集以下信息：
 
-用 `AskUserQuestion` 告知状态：
+### 1a. 项目名称
 
-> **环境检查**：
-> - Node.js：[OK / 未安装]
-> - Codex CLI：[版本 / 未安装]
+> 请为本论文项目命名（用于目录和 commit 标识）：
 >
-> Codex 插件用于执行子任务。如果未安装：
-> `/plugin install codex@openai-codex` 然后 `/reload-plugins`
+> 例如：`acud_transcription_regulation`、`madsa_virulence_factor`
 
-选项：
-- `Codex 已就绪，继续初始化`
-- `先去安装 Codex，稍后再运行 /omp:setup`
+用户自由输入。
 
-## 第二步：询问研究信息
+### 1b. 目标期刊
 
-用 `AskUserQuestion` 收集项目基本信息：
+> 目标投稿期刊？
 
-> 请描述你的研究项目：
-> - 研究主题是什么？（例：多模态医学影像分割）
+选项（可自由输入其他期刊）：
+- `Nature Microbiology`
+- `mBio`
+- `PLOS Pathogens`
+- `Fungal Genetics and Biology`
+- `eLife`
+- `其他（请输入）`
 
-然后再问：
+### 1c. 通讯作者邮箱
 
-> 从哪个阶段开始？
+> 通讯作者邮箱？（用于期刊投稿系统和 cover letter）
 
-选项：
-- `survey（文献调研）`
-- `ideation（创新点生成）`
-- `experiment（实验）`
-- `publication（论文写作）`
+用户自由输入。
 
-## 第三步：创建目录结构
+---
+
+## 第二步：创建目录结构
+
+如果以下目录不存在，则创建：
 
 ```bash
-mkdir -p .pipeline/memory .pipeline/tasks .pipeline/docs .pipeline/.hook-events .claude/skills
-cp -rn "${CLAUDE_PLUGIN_ROOT}/skills/." .claude/skills/
+# 论文写作工作区
+mkdir -p paper/sections paper/refs paper/figures
+
+# 补充材料
+mkdir -p supplementary/tables supplementary/figures
+
+# 投稿文件
+mkdir -p submission/figures
+
+# Pipeline 目录
+mkdir -p .pipeline/memory/reference_analysis .pipeline/tasks .pipeline/config .pipeline/docs
+
+# Hooks
+mkdir -p hooks/figure-watcher
 ```
 
-注册 SessionStart hook（让每次开启 Claude Code 时自动弹出角色选择）：
+---
+
+## 第三步：初始化 Git 仓库
+
+检查当前目录是否已有 Git 仓库：
+
+```bash
+git rev-parse --git-dir 2>/dev/null && echo "Git repo exists" || git init
+```
+
+如果是新初始化的仓库，告知用户。
+
+### 3a. 安装 pre-push Hook
+
+写入 `.git/hooks/pre-push`，防止任何 push 操作：
+
+```bash
+cat > .git/hooks/pre-push << 'HOOK'
+#!/bin/bash
+# Oh My Bio-Paper: 禁止任何 push 操作
+echo "================================================"
+echo "ERROR: This repository is LOCAL-ONLY."
+echo "Pushing to any remote is blocked by pre-push hook."
+echo "If you really need to back up, use rsync to an"
+echo "encrypted external drive or a private NAS."
+echo "================================================"
+exit 1
+HOOK
+chmod +x .git/hooks/pre-push
+```
+
+### 3b. 生成 .gitignore
+
+写入项目根目录的 `.gitignore`（v1.3.1 含 PDF）：
+
+```gitignore
+# Figure 源文件（TIFF/PNG/SVG/PDF，体积大且不适合 diff）
+paper/figures/*.tiff
+paper/figures/*.tif
+paper/figures/*.png
+paper/figures/*.svg
+paper/figures/*.pdf
+paper/figures/*.ai
+paper/figures/*.psd
+
+# LaTeX 编译产物
+*.aux
+*.log
+*.out
+*.toc
+*.bbl
+*.blg
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+paper/main.pdf
+submission/*.pdf
+
+# 补充数据文件
+supplementary/raw_data/
+supplementary/*.xlsx
+supplementary/*.csv
+
+# Zotero 缓存和临时文件
+.pipeline/config/zotero_cache/
+*.tmp
+*.bak
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+```
+
+---
+
+## 第四步：初始化记忆文件
+
+读取 `.pipeline/memory/` 下的所有模板文件。将以下信息填入对应的占位符：
+
+### 4a. project_truth.md
+
+用采集到的信息填写 `项目名称`、`目标期刊`、`通讯作者`、`创建时间`（当前日期）。
+
+### 4b. project.json
+
+写入 `.pipeline/config/project.json`：
+
+```json
+{
+  "project_name": "[用户填写的项目名]",
+  "target_journal": "[用户选择的期刊]",
+  "corresponding_author": "",
+  "corresponding_email": "[用户填写的邮箱]",
+  "stage": "preparation",
+  "created": "[当前日期 ISO 格式]"
+}
+```
+
+### 4c. journal_spec.md
+
+如果用户选择的期刊在 `skills/journal-formatter/references/journal-templates/` 下有对应模板，
+读取模板内容填入 `journal_spec.md` 的相应字段。否则标记为待手动填写。
+
+### 4d. tasks.json
+
+写入初始任务树：
+
+```json
+{
+  "version": "1.0.0",
+  "created": "[当前日期 ISO 格式]",
+  "tasks": [
+    {
+      "id": "prep-001",
+      "title": "Complete style profile setup",
+      "status": "pending",
+      "assignee": "StyleKeeper"
+    },
+    {
+      "id": "prep-002",
+      "title": "Register all figures",
+      "status": "pending",
+      "assignee": "user"
+    },
+    {
+      "id": "prep-003",
+      "title": "Fill strain/plasmid table",
+      "status": "pending",
+      "assignee": "user"
+    }
+  ]
+}
+```
+
+---
+
+## 第五步：注册 SessionStart Hook
+
+确保 `.claude/settings.json` 中注册了 SessionStart hook，每次启动时弹出角色选择：
 
 ```bash
 node -e "
@@ -70,54 +217,84 @@ if (!already) {
   s.hooks.SessionStart.push({ matcher: '', hooks: [{ type: 'command', command: cmd }] });
   fs.mkdirSync('.claude', { recursive: true });
   fs.writeFileSync(f, JSON.stringify(s, null, 2));
-  console.log('hook registered');
-} else { console.log('hook already registered'); }
+  console.log('SessionStart hook registered');
+} else { console.log('SessionStart hook already registered'); }
 "
 ```
 
-## 第四步：写入初始文件
+---
 
-创建以下文件（已存在则跳过）：
+## 第六步：style-curator 和 figure-watcher（Stub）
 
-**`.pipeline/docs/research_brief.json`**：
-```json
-{
-  "topic": "[用户填写的主题]",
-  "goal": "",
-  "currentStage": "[用户选择的阶段]",
-  "successThreshold": "需要在此填写成功标准"
-}
-```
+> ⚠️ 以下功能在 Phase 2 实现，当前仅显示提示信息。
 
-**`.pipeline/memory/project_truth.md`**：
-```markdown
-# Project Truth
+### 6a. style-curator stub
 
-## 研究主题
-[主题]
+用 `AskUserQuestion` 告知用户：
 
-## 已确认决策
-（空，随项目推进逐步填充）
-```
-
-**`.pipeline/memory/orchestrator_state.md`**、**`execution_context.md`**、**`review_log.md`**、**`agent_handoff.md`**、**`decision_log.md`**、**`literature_bank.md`**、**`experiment_ledger.md`**：均创建空白初始版本。
-
-**`.pipeline/tasks/tasks.json`**：
-```json
-{"version": 1, "tasks": []}
-```
-
-## 第五步：完成确认
-
-> ✅ 研究项目初始化完成！
+> **风格档案初始化（Phase 2）**
 >
-> **项目**：[主题]
-> **起始阶段**：[阶段]
+> style-curator skill 尚未实现。风格档案 (`style_profile.md`) 当前为空模板。
+> Phase 2 完成后，`/omp:setup` 将在此步自动运行风格交互问卷和范本论文分析。
 >
-> 接下来：
-> - 运行 `/omp:plan` 查看整体状态
-> - 运行 `/omp:survey` 开始文献调研（如果从 survey 阶段）
+> 你可以稍后运行 `/omp:style` 来手动触发风格档案生成。
 
 选项：
-- `开始！运行 /omp:plan`
+- `了解，继续`
+
+### 6b. figure-watcher stub
+
+用 `AskUserQuestion` 告知用户：
+
+> **Figure 自动登记（Phase 2）**
+>
+> figure-watcher Hook 尚未实现。如果你已有 Figure 文件，请将它们放入
+> `paper/figures/` 目录，后续 Hook 启用后会自动登记到 `figure_registry.md`。
+>
+> 当前你可以手动编辑 `.pipeline/memory/figure_registry.md` 登记 Figure。
+
+选项：
+- `了解，继续`
+
+---
+
+## 第七步：首次 Git 提交
+
+将所有初始化文件提交：
+
+```bash
+git add -A
+git commit -m "meta(setup): initial project scaffolding
+
+Project: [项目名]
+Journal: [期刊]
+Stage: preparation"
+```
+
+---
+
+## 第八步：完成确认
+
+用 `AskUserQuestion` 显示初始化摘要：
+
+> ✅ **Oh My Bio-Paper 项目初始化完成！**
+>
+> | 项目 | 值 |
+> |------|------|
+> | **名称** | [项目名] |
+> | **期刊** | [期刊] |
+> | **通讯作者** | [邮箱] |
+> | **阶段** | Preparation |
+> | **Git** | 已初始化（pre-push hook 已安装，本地仓库禁止 push） |
+>
+> **待完成事项**：
+> 1. 将 Figure 文件放入 `paper/figures/`
+> 2. 填写菌株表：`.pipeline/memory/strain_plasmid_table.md`
+> 3. 运行 `/omp:style` 生成风格档案（Phase 2 启用后）
+>
+> **下一步**：
+
+选项：
+- `运行 /omp:plan 查看全局状态`
+- `先手动填写菌株表和 Figure 信息`
 - `我先自己看看文件结构`
