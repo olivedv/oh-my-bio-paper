@@ -49,15 +49,18 @@ stub 模式的提示选项统一是：
 
 ## 第三步：加载 style-curator skill
 
-读取 `skills/style-curator/SKILL.md` 作为本次交互的指令文件。严格按其
-**"工作流" 六个步骤**执行。辅助文件：
+**你必须现在立即用 Read 工具依次读取以下 3 个文件的完整内容，
+然后严格按这些文件中的定义执行，不得自行编造问题、选项或字段。**
 
-- 题目顺序与内容：`skills/style-curator/references/interview-questions.md`
-- 落盘字段定义：`skills/style-curator/references/style-schema.md`
-- 期刊预设：`skills/style-curator/references/journal-presets/<name>.md`
-  （若为 stub 则忽略预设，不带默认值）
+1. `skills/style-curator/SKILL.md` — 工作流指导
+2. `skills/style-curator/references/interview-questions.md` — 12 题清单（含 prompt 和 options）
+3. `skills/style-curator/references/style-schema.md` — style_profile.md 的完整字段定义
 
-**不要**从记忆里重新造一遍题目或 schema —— 始终以这三份 references 为准。
+读取完毕后，严格按这三份文件中的定义执行后续步骤。
+辅助参考（可选，若为 stub 则忽略）：
+- `skills/style-curator/references/journal-presets/<name>.md`
+
+**硬性规则：不要从记忆里重新造一遍题目或 schema。始终以上述三份文件为准。**
 
 ---
 
@@ -74,11 +77,38 @@ stub 模式的提示选项统一是：
    - Q11 多选拆为 7 个单问，先问预问决定是否走快捷通道
 5. 生成 `.pipeline/memory/style_profile.md`（§步骤 5）
 
-**全程使用 AskUserQuestion**。不要用纯文字列选项让用户打字选择。
+**硬性规则：Q1–Q12 的题面 prompt 和选项必须逐字摘自
+`interview-questions.md` 的对应部分，严禁改写、翻译或自行编造。**
+
+例如：
+- Q1 的 prompt 必须是 `interview-questions.md` 中 Q1 section 的 `prompt:` 字段原文
+- Q1 的选项必须是该文件 `options:` 数组中的值，按顺序逐一呈现
+- Q2–Q12 同理
+
+不得用自己的话替代、汇总或优化问题表述。**全程使用 AskUserQuestion**。
+不要用纯文字列选项让用户打字选择。
 
 ---
 
 ## 第五步：完成确认
+
+生成的 `.pipeline/memory/style_profile.md` 必须严格遵循以下结构：
+
+**前半部分**（必须）：YAML frontmatter（以 `---` 开头和结尾）
+- 字段名和枚举值必须精确对应 `style-schema.md` 中定义的字段和值
+- 不得改名、简化或新增字段
+- 不得使用纯 markdown 格式替代（如 `# narrative_style: ...`）
+
+**后半部分**（必须）：自由文本正文，按 `style-schema.md` 指定的 6 节顺序
+- `# Style Profile: <project_name>`
+- `## Style Summary`
+- `## Preferred Phrases`
+- `## Banned Expressions`
+- `## Domain-Specific Conventions (HARD RULES)`
+- `## Tone Calibration Examples`
+- `## Refinement History`
+
+违反上述结构会导致后续 Writer / Reviewer 无法正确解析 profile。
 
 按 SKILL.md §步骤 6 展示生成摘要。在用户确认后：
 
