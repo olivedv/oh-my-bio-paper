@@ -1,14 +1,23 @@
 # Oh My Bio-Paper — Project Context
 
 ## 项目类型
-这是一个湿实验生物学论文写作项目，非 ML/计算类。
-所有数据和图表已就绪，当前阶段是论文撰写。
+本仓库是一个**工程项目：开发一套面向湿实验生物学的论文写作流水线**
+（`oh-my-paper` 的生物学分支，当前在 `bio-paper-v1.4`），
+**不是**在撰写某一篇具体论文。交付物是流水线本身：Claude Code 与 Codex 插件、
+agent 角色（Conductor / Writer / Reviewer / StyleKeeper / Formatter 等）、
+skills、`/omp:*` 命令、生命周期 hooks，以及配套的桌面工作台
+（Tauri 应用，见 `src-tauri/` + `src/`）。
+`sections/` 下的 LaTeX 是用来自测（dogfood）流水线的样例稿件，不是最终科研论文，
+改动它时不要当成真实论文来对待。
 
-## 研究领域
-真菌分子生物学，模式菌 Talaromyces marneffei。
-常涉及：CRISPR-Cas9 基因敲除、转录调控、RNA-seq、荧光显微镜。
+## 目标领域
+流水线服务的对象是**湿实验生物学论文**（非 ML/计算类），
+以真菌分子生物学为典型场景，模式菌 *Talaromyces marneffei*，
+常见实验类型：CRISPR-Cas9 基因敲除、转录调控、RNA-seq、荧光显微镜。
+下面的写作规范是**流水线需要理解并对生成内容强制执行**的领域约定，
+而非某篇论文的私有要求。
 
-## 写作规范
+## 流水线需强制的写作规范（领域约定）
 - 基因名斜体（*acuD*），蛋白名正体（AcuD）
 - 菌名首次全称斜体后续缩写（*Talaromyces marneffei* → *T. marneffei*）
 - Methods 用过去时被动语态
@@ -16,14 +25,17 @@
 - Discussion 用现在时讨论意义，过去时回溯本研究
 - 避免 AI 写作痕迹过重的表达
 
-## 工作流
+## 流水线定义的写作工作流
 撰写顺序：Methods → Results → Discussion → Introduction → Abstract
 每 section 完成后自动触发局部审查。
 
-## 工具链
-- LaTeX 排版
-- Zotero 管理参考文献（通过 MCP 集成）
-- 目标期刊信息见 .pipeline/memory/journal_spec.md
+## 技术栈
+- 流水线交付形态：Claude Code 插件（`plugins/oh-my-paper`）、Codex 插件
+  （`plugins/oh-my-paper-codex`）、`skills/`、`templates/`、`sidecar/`、`workers/`，
+  以及 `src-tauri/` + `src/` 的桌面工作台
+- 稿件产物：LaTeX 排版
+- 参考文献：Zotero 通过 MCP 集成
+- 目标期刊信息（样例/模板）见 `.pipeline/memory/journal_spec.md`
 
 ---
 
