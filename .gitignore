@@ -61,3 +61,6 @@ sidecar/dist
 workers/.wrangler
 workers/.dev.vars*
 !workers/.dev.vars.example
+
+# Auto-generated per-session context (written by SessionStart hook)
+.pipeline/.session-context.md
